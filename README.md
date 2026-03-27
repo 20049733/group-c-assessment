@@ -48,27 +48,6 @@ NODE_ENV=development
 
 ---
 
-## Repository Structure
-
-```
-group-c-assessment/
-├── src/
-│   ├── app/              # Next.js App Router — routes and server components
-│   ├── components/       # Reusable UI components and smart navigation
-│   └── lib/
-│       └── db.ts         # PostgreSQL connection pool (singleton)
-├── public/               # Static assets
-├── schema.sql            # Database schema and seed data
-├── Dockerfile            # Multi-stage production Docker build
-├── docker-compose.yml    # Production container orchestration
-├── nginx.conf            # Nginx reverse proxy configuration
-├── next.config.ts        # Next.js configuration (standalone output)
-├── .env.example          # Environment variable template
-└── INFRA_GUIDE.md        # Detailed AWS infrastructure guide
-```
-
----
-
 ## Cloud Deployment on AWS
 
 The production setup uses **two EC2 instances** in the same AWS VPC:
@@ -267,13 +246,24 @@ RDS Primary (Multi-AZ)
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 
-- `/src/app`: Next.js App Router (Routes & Server Components).
-- `/src/components`: Bespoke UI components and Smart Navigation.
-- `/src/lib/db.ts`: PostgreSQL Connection Pool (Singleton).
-- `schema.sql`: Database schema and initial seed data.
-- `docker-compose.yml`: Local infrastructure orchestration.
+```
+group-c-assessment/
+├── src/
+│   ├── app/              # Next.js App Router — routes and server components
+│   ├── components/       # Reusable UI components and smart navigation
+│   └── lib/
+│       └── db.ts         # PostgreSQL connection pool (singleton)
+├── public/               # Static assets
+├── schema.sql            # Database schema and seed data
+├── Dockerfile            # Multi-stage production Docker build
+├── docker-compose.yml    # Production container orchestration
+├── nginx.conf            # Nginx reverse proxy configuration
+├── next.config.ts        # Next.js configuration (standalone output)
+├── .env.example          # Environment variable template
+└── INFRA_GUIDE.md        # Detailed AWS infrastructure guide
+```
 
 ---
 
