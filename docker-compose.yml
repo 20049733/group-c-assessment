@@ -1,27 +1,51 @@
-services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      - POSTGRES_URL=postgresql://postgres:postgres@db:5432/noelgroup
-      - NODE_ENV=development
-    depends_on:
-      db:
-        condition: service_healthy
+# ============================================================
+# docker-compose.yml — Noel Group | EC2 Production Deployment
+#
+# Services:
+#   - app    : Next.js application (port 3000, internal only)
+#   - nginx  : Reverse proxy (port 80, public-facing)
+#
+# Postgres runs on a SEPARATE EC2 instance.
+# Set POSTGRES_URL in your .env file to point at that instance.
+# ============================================================
 
-  db:
-    image: postgres:16-alpine
+services:
+
+  # ----------------------------------------------------------
+  # Next.js Application
+  # ----------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: noelgroup_app
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_DB=noelgroup
+      - NODE_ENV=production
+      - PORT=3000
+    expose:
+      - "3000"           # Internal only — Nginx handles public traffic
+    networks:
+      - noelgroup_net
+
+  # ----------------------------------------------------------
+  # Nginx Reverse Proxy
+  # ----------------------------------------------------------
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: noelgroup_nginx
+    restart: unless-stopped
     ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - "80:80"          # Expose port 80 to the internet
     volumes:
-      - ./schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    networks:
+      - noelgroup_net
+
+networks:
+  noelgroup_net:
+    driver: bridge
