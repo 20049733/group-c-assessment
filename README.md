@@ -184,8 +184,6 @@ You should see the Noel Group application homepage.
 |---|---|---|
 | `POSTGRES_URL` | Full PostgreSQL connection string | `postgresql://postgres:password@172.31.x.x:5432/noelgroup` |
 | `NODE_ENV` | Application environment | `production` |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (if used) | `https://xyz.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (if used) | `eyJ...` |
 
 > **Never commit your `.env` file to version control.**
 
