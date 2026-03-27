@@ -117,7 +117,9 @@ chomd 644 /home/ubuntu/schema.sql
 chmod 755 /home/ubuntu
 ``` 
 - Load the schema:
-`sudo -u postgres psql -d noelgroup -f schema.sql`
+```
+sudo -u postgres psql -d noelgroup -f schema.sql
+```
 - In the inbound rule for the Database EC2 Security group: allow port 5432 from App EC2 private IP only
 
 **2. App EC2**
