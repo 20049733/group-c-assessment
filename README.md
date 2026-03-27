@@ -182,7 +182,7 @@ You should see the Noel Group application homepage.
 
 | Variable | Description | Example |
 |---|---|---|
-| `POSTGRES_URL` | Full PostgreSQL connection string | `postgresql://postgres:password@172.31.x.x:5432/noelgroup` |
+| `POSTGRES_URL` | Full PostgreSQL connection string | `postgresql://postgres:dbpassword@<db private ip>:5432/noelgroup` |
 | `NODE_ENV` | Application environment | `production` |
 
 > **Never commit your `.env` file to version control.**
