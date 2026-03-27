@@ -63,31 +63,6 @@ NODE_ENV=development
 | Reverse Proxy | Nginx 1.25 |
 | Cloud Infrastructure | AWS EC2 (eu-west-1) |
 
-### Infrastructure Overview
-
-```
-Internet
-    │
-    ▼
-┌─────────────────────────┐
-│   EC2 — App Server      │
-│  ┌───────────────────┐  │
-│  │  Nginx (port 80)  │  │
-│  └────────┬──────────┘  │
-│           │              │
-│  ┌────────▼──────────┐  │
-│  │  Next.js (3000)   │  │
-│  └───────────────────┘  │
-└──────────────┬──────────┘
-               │ Private VPC
-               ▼
-┌─────────────────────────┐
-│   EC2 — Database        │
-│   PostgreSQL 16         │
-│   Port 5432             │
-└─────────────────────────┘
-```
-
 ---
 
 ### Key Features
