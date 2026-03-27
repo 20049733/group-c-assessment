@@ -111,6 +111,11 @@ Add this line at the bottom (replace with your App EC2 private IP):
 host    noelgroup    postgres    <app-ec2-private-ip>/32    md5
 ```
 - Copy the schema into the database EC2
+- Chamge the permissions for the schema and the directory
+```
+chomd 644 /home/ubuntu/schema.sql
+chmod 755 /home/ubuntu
+``` 
 - Load the schema:
 `sudo -u postgres psql -d noelgroup -f schema.sql`
 - In the inbound rule for the Database EC2 Security group: allow port 5432 from App EC2 private IP only
