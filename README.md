@@ -65,16 +65,6 @@ NODE_ENV=development
 
 ---
 
-### Key Features
-
-- **Magazine-Style Candidate Registration** — Multi-step application flow with micro-animations and high-conversion UX design.
-- **Agent Dashboard** — Real-time pipeline management with full candidate profile views and status controls.
-- **Candidate Portal** — Personal dashboard for applicants to track status and receive feedback.
-- **Smart Navigation** — Context-aware header system that adapts for Agents, Candidates, and new visitors.
-- **Connection Pooling** — PostgreSQL singleton connection pool via `src/lib/db.ts` for efficient database usage.
-
----
-
 The production setup uses **two EC2 instances** in the same AWS VPC:
 
 | Instance | Purpose | Recommended Type |
