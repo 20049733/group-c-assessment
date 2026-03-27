@@ -50,6 +50,56 @@ NODE_ENV=development
 
 ## Cloud Deployment on AWS
 
+### Technical Architecture
+
+| Layer | Technology |
+|---|---|
+| Frontend & Backend | Next.js 16 (App Router, Server Components) |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS 4 |
+| Database | PostgreSQL 16 |
+| Runtime | Node.js 20 |
+| Containerisation | Docker + Docker Compose |
+| Reverse Proxy | Nginx 1.25 |
+| Cloud Infrastructure | AWS EC2 (eu-west-1) |
+
+### Infrastructure Overview
+
+```
+Internet
+    │
+    ▼
+┌─────────────────────────┐
+│   EC2 — App Server      │
+│  ┌───────────────────┐  │
+│  │  Nginx (port 80)  │  │
+│  └────────┬──────────┘  │
+│           │              │
+│  ┌────────▼──────────┐  │
+│  │  Next.js (3000)   │  │
+│  └───────────────────┘  │
+└──────────────┬──────────┘
+               │ Private VPC
+               ▼
+┌─────────────────────────┐
+│   EC2 — Database        │
+│   PostgreSQL 16         │
+│   Port 5432             │
+└─────────────────────────┘
+```
+
+---
+
+### Key Features
+
+- **Magazine-Style Candidate Registration** — Multi-step application flow with micro-animations and high-conversion UX design.
+- **Agent Dashboard** — Real-time pipeline management with full candidate profile views and status controls.
+- **Candidate Portal** — Personal dashboard for applicants to track status and receive feedback.
+- **Smart Navigation** — Context-aware header system that adapts for Agents, Candidates, and new visitors.
+- **Connection Pooling** — PostgreSQL singleton connection pool via `src/lib/db.ts` for efficient database usage.
+
+---
+
 The production setup uses **two EC2 instances** in the same AWS VPC:
 
 | Instance | Purpose | Recommended Type |
