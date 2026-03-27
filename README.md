@@ -48,13 +48,222 @@ NODE_ENV=development
 
 ---
 
-## ☁️ Production Deployment
+## Repository Structure
 
-This project is optimized for **AWS** (ECS Fargate / App Runner) rather than Vercel. 
+```
+group-c-assessment/
+├── src/
+│   ├── app/              # Next.js App Router — routes and server components
+│   ├── components/       # Reusable UI components and smart navigation
+│   └── lib/
+│       └── db.ts         # PostgreSQL connection pool (singleton)
+├── public/               # Static assets
+├── schema.sql            # Database schema and seed data
+├── Dockerfile            # Multi-stage production Docker build
+├── docker-compose.yml    # Production container orchestration
+├── nginx.conf            # Nginx reverse proxy configuration
+├── next.config.ts        # Next.js configuration (standalone output)
+├── .env.example          # Environment variable template
+└── INFRA_GUIDE.md        # Detailed AWS infrastructure guide
+```
 
-- **Dockerfile**: Includes a multi-stage production build for minimal image size.
-- **PostgreSQL**: Designed to connect to AWS RDS via connection strings.
-- **Infrastructure Guide**: See the detailed [INFRA_GUIDE.md](./INFRA_GUIDE.md) for step-by-step AWS provisioning.
+---
+
+## Cloud Deployment on AWS
+
+The production setup uses **two EC2 instances** in the same AWS VPC:
+
+| Instance | Purpose | Recommended Type |
+|---|---|---|
+| App Server | Next.js + Nginx via Docker | t3.small or c7i-flex.large |
+| Database Server | PostgreSQL 16 | t3.medium or m7i-flex.large |
+
+### High-Level Deployment Steps
+
+**1. Database EC2**
+- Launch Ubuntu 24.04 EC2
+- Create a new Security Group called 'noelgroup-postgres-sg' allow port 22 from your IP only
+- Install PostgreSQL 16
+```
+SSH into the Postgres EC2:
+ssh -i your-key.pem ubuntu@<postgres-ec2-public-ip>
+
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y postgresql-16
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
+```
+- Configure Postgresql
+```
+sudo -u postgres psql
+ALTER USER postgres WITH PASSWORD 'yourStrongPassword';
+CREATE DATABASE noelgroup;
+\q
+```
+- Configure `postgresql.conf` to set `listen_addresses = '*'`
+```
+Edit the PostgreSQL config to listen on all interfaces:
+sudo nano /etc/postgresql/16/main/postgresql.conf
+
+Find and change:
+listen_addresses = 'localhost'   →   listen_addresses = '*'
+```
+- Update `pg_hba.conf` to allow the Application EC2's private IP on port 5432
+```
+Edit pg_hba.conf to allow the app EC2's private IP:
+sudo nano /etc/postgresql/16/main/pg_hba.conf
+
+Add this line at the bottom (replace with your App EC2 private IP):
+host    noelgroup    postgres    <app-ec2-private-ip>/32    md5
+```
+- Copy the schema into the database EC2
+- Load the schema:
+`sudo -u postgres psql -d noelgroup -f schema.sql`
+- In the inbound rule for the Database EC2 Security group: allow port 5432 from App EC2 private IP only
+
+**2. App EC2**
+- Launch Ubuntu 24.04 EC2
+- Install Docker and Docker Compose
+```
+SSH into the App EC2:
+ssh -i your-key.pem ubuntu@<app-ec2-public-ip>
+
+Install Docker:
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+Add ubuntu user to docker group (so you don't need sudo):
+sudo usermod -aG docker ubuntu
+newgrp docker
+
+Verify Docker is running:
+docker --version
+docker compose version
+```
+- Clone this repository
+```
+On the App EC2, clone the repository:
+git clone https://github.com/20049733/group-c-assessment.git
+cd group-c-assessment
+```
+- Create `.env` with the Postgres EC2's **private IP** in `POSTGRES_URL`
+```
+cp .env.example .env
+nano .env
+
+Edit the .env:
+POSTGRES_URL: postgresql://postgres:yourStrongPassword@<postgres-ec2-private-ip>:5432/noelgroup
+NODE_ENV: production
+```
+- Run:
+```
+docker compose up -d --build
+docker compose ps
+docker compose logs -f
+```
+- Security group: allow port 80 (HTTP) from anywhere, port 22 (SSH) from your IP only
+- Test Nginx is responding:
+```
+From your local machine, open a browser and navigate to:
+http://<app-ec2-public-ip>
+You should see the Noel Group application homepage.
+
+```
+
+---
+
+## Environment Variables
+
+| Variable | Description | Example |
+|---|---|---|
+| `POSTGRES_URL` | Full PostgreSQL connection string | `postgresql://postgres:password@172.31.x.x:5432/noelgroup` |
+| `NODE_ENV` | Application environment | `production` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (if used) | `https://xyz.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (if used) | `eyJ...` |
+
+> **Never commit your `.env` file to version control.**
+
+---
+
+## Docker Reference
+
+| Command | Description |
+|---|---|
+| `docker compose up -d --build` | Build images and start all containers |
+| `docker compose ps` | Show container status |
+| `docker compose logs -f app` | Stream app logs |
+| `docker compose logs -f nginx` | Stream Nginx logs |
+| `docker compose down` | Stop and remove all containers |
+| `docker compose restart app` | Restart the app container |
+| `docker exec -it noelgroup_app sh` | Open shell inside app container |
+
+---
+
+## Scaling Recommendations
+
+The current architecture runs on two EC2 instances and is suitable for moderate traffic. Below are recommended upgrades for higher availability and fault tolerance.
+
+### Application Server Scaling
+
+The single App EC2 is a potential bottleneck under high traffic. To scale it:
+
+**Option 1 — Auto Scaling Group (ASG) + Application Load Balancer (ALB)**
+
+This is the AWS-native approach for horizontal scaling:
+
+1. Create an **AMI** (snapshot) of your working App EC2 with Docker and the app pre-installed.
+2. Create a **Launch Template** using that AMI.
+3. Create an **Auto Scaling Group** with a minimum of 1 and maximum of N instances using the launch template.
+4. Place an **Application Load Balancer** in front of the ASG to distribute incoming traffic across all healthy instances.
+5. If one instance fails, the ASG automatically replaces it. If traffic spikes, it automatically adds more.
+
+```
+Internet → ALB (port 80) → ASG → [App EC2 #1, App EC2 #2, App EC2 #N]
+```
+
+**Option 2 — Vertical Scaling**
+
+Simply stop the App EC2, change the instance type to a larger one (e.g. `c7i-flex.xlarge`), and restart. Simpler but still a single point of failure.
+
+---
+
+### Database Server Scaling
+
+A single Postgres EC2 is a single point of failure — if it goes down, the entire application goes down.
+
+**Recommended: Migrate to AWS RDS**
+
+AWS RDS (Relational Database Service) is a fully managed PostgreSQL service that handles backups, patching, and failover automatically.
+
+Benefits over a self-managed EC2 Postgres:
+- **Automatic backups** — daily snapshots with point-in-time recovery
+- **Multi-AZ deployment** — a standby replica in a different availability zone; automatic failover in ~60 seconds if the primary fails
+- **Read replicas** — offload read-heavy queries to separate replica instances
+- **No manual maintenance** — AWS handles OS patching and Postgres upgrades
+
+**Migration steps:**
+1. Create an RDS Postgres 16 instance (`db.t3.micro` is free tier eligible)
+2. Set the security group to allow port 5432 from the App EC2 private IP
+3. Update `POSTGRES_URL` in your App EC2's `.env` to point at the RDS endpoint
+4. Run `schema.sql` against the RDS instance to initialise the schema
+5. Restart the app containers: `docker compose down && docker compose up -d`
+
+**Recommended production database architecture:**
+
+```
+App EC2 / ASG
+    │
+    ▼
+RDS Primary (Multi-AZ)
+    │
+    ├── Standby Replica (different AZ — automatic failover)
+    └── Read Replica (optional — for read-heavy workloads)
+```
 
 ---
 
